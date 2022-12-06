@@ -12,7 +12,9 @@ import Data
 import Shared
 import BraveUI
 import BraveShared
+import BraveFavicon
 import os.log
+import BraveFavicon
 
 // MARK: UITableViewDataSource
 
@@ -141,7 +143,7 @@ extension PlaylistListViewController: UITableViewDataSource {
       cell.thumbnailGenerator.loadThumbnail(assetUrl: assetUrl, favIconUrl: favIconUrl) { [weak cell] image in
         guard let cell = cell else { return }
 
-        cell.iconView.image = image ?? FaviconFetcher.defaultFaviconImage
+        cell.iconView.image = image ?? Favicon.defaultImage
         cell.iconView.backgroundColor = .black
         cell.iconView.contentMode = .scaleAspectFit
         cell.loadingView.stopAnimating()

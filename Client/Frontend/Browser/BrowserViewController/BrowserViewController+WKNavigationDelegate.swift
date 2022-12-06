@@ -11,6 +11,7 @@ import BraveCore
 import BraveUI
 import BraveWallet
 import os.log
+import BraveFavicon
 
 extension WKNavigationAction {
   /// Allow local requests only if the request is privileged.
@@ -615,11 +616,10 @@ extension BrowserViewController: WKNavigationDelegate {
 
       navigateInTab(tab: tab, to: navigation)
       if let url = tab.url, tab.shouldClassifyLoadsForAds {
-        let faviconURL = URL(string: tab.displayFavicon?.url ?? "")
         rewards.reportTabUpdated(
           tab: tab,
           url: url,
-          faviconURL: faviconURL,
+          faviconURL: nil,
           isSelected: tabManager.selectedTab == tab,
           isPrivate: PrivateBrowsingManager.shared.isPrivateBrowsing
         )

@@ -12,6 +12,7 @@ import SwiftyJSON
 import Data
 import os.log
 import BraveWallet
+import BraveFavicon
 
 protocol TabContentScriptLoader {
   static func loadUserScript(named: String) -> String?
@@ -72,6 +73,7 @@ class Tab: NSObject {
   
   private(set) var type: TabType = .regular
   private let syncTab: BraveSyncTab?
+  let faviconDriver: FaviconDriver?
   
   var redirectURLs = [URL]()
 
@@ -275,7 +277,15 @@ class Tab: NSObject {
     self.configuration = configuration
     rewardsId = UInt32.random(in: 1...UInt32.max)
     nightMode = Preferences.General.nightModeEnabled.value
-    syncTab = tabGeneratorAPI?.createBraveSyncTab()
+    syncTab = tabGeneratorAPI?.createBraveSyncTab(isOffTheRecord: type == .private)
+    
+    if let syncTab = syncTab {
+      faviconDriver = FaviconDriver(webState: syncTab.webState).then {
+        $0.setMaximumFaviconImageSize(1024)
+      }
+    } else {
+      faviconDriver = nil
+    }
 
     super.init()
     self.type = type
@@ -511,7 +521,9 @@ class Tab: NSObject {
 
   var displayFavicon: Favicon? {
     if let url = url, InternalURL(url)?.isAboutHomeURL == true { return nil }
-    return favicons.max { $0.width! < $1.width! }
+    return favicons.max {
+      $0.image?.size.width ?? 0 < $1.image?.size.width ?? 0
+    }
   }
 
   var canGoBack: Bool {
