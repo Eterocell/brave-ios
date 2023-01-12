@@ -19,8 +19,10 @@ public class WalletStore {
 
   private var cancellable: AnyCancellable?
   private var onPendingRequestCancellable: AnyCancellable?
+  private let braveCore: BraveCoreMain?
 
   public init(
+    braveCore: BraveCoreMain?,
     keyringService: BraveWalletKeyringService,
     rpcService: BraveWalletJsonRpcService,
     walletService: BraveWalletBraveWalletService,
@@ -31,6 +33,7 @@ public class WalletStore {
     ethTxManagerProxy: BraveWalletEthTxManagerProxy,
     solTxManagerProxy: BraveWalletSolanaTxManagerProxy
   ) {
+    self.braveCore = braveCore
     self.keyringStore = .init(keyringService: keyringService, walletService: walletService, rpcService: rpcService)
     self.setUp(
       keyringService: keyringService,
@@ -65,6 +68,7 @@ public class WalletStore {
           self.cryptoStore = nil
         } else if isDefaultKeyringCreated, self.cryptoStore == nil {
           self.cryptoStore = CryptoStore(
+            braveCore: self.braveCore,
             keyringService: keyringService,
             rpcService: rpcService,
             walletService: walletService,

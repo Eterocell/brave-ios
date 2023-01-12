@@ -36,7 +36,7 @@ protocol SettingsDelegate: AnyObject {
 
 class SettingsViewController: TableViewController {
   weak var settingsDelegate: SettingsDelegate?
-
+  
   private let profile: Profile
   private let tabManager: TabManager
   private let rewards: BraveRewards?
@@ -50,10 +50,11 @@ class SettingsViewController: TableViewController {
   private let keyringStore: KeyringStore?
   private let cryptoStore: CryptoStore?
   private let windowProtection: WindowProtection?
-
+  private let braveCore: BraveCoreMain
+  
   private let featureSectionUUID: UUID = .init()
   private let walletRowUUID: UUID = .init()
-
+  
   init(
     profile: Profile,
     tabManager: TabManager,
@@ -78,47 +79,48 @@ class SettingsViewController: TableViewController {
     self.p3aUtilities = braveCore.p3aUtils
     self.keyringStore = keyringStore
     self.cryptoStore = cryptoStore
-
+    self.braveCore = braveCore
+    
     super.init(style: .insetGrouped)
   }
-
+  
   @available(*, unavailable)
   required init?(coder aDecoder: NSCoder) {
     fatalError()
   }
-
+  
   override func viewDidLoad() {
     super.viewDidLoad()
-
+    
     navigationItem.title = Strings.settings
     tableView.accessibilityIdentifier = "SettingsViewController.tableView"
     setUpSections()
-
+    
     tableView.separatorInset = UIEdgeInsets(top: 0, left: 16, bottom: 0, right: 0)
-
+    
     view.backgroundColor = .braveGroupedBackground
     view.tintColor = .braveBlurpleTint
     navigationController?.view.backgroundColor = .braveGroupedBackground
   }
-
+  
   private func displayRewardsDebugMenu() {
     guard let rewards = rewards else { return }
     let settings = RewardsDebugSettingsViewController(rewards: rewards, legacyWallet: legacyWallet)
     navigationController?.pushViewController(settings, animated: true)
   }
-
+  
   private func displayBraveNewsDebugMenu() {
     let settings = UIHostingController(rootView: BraveNewsDebugSettingsView(dataSource: feedDataSource))
     navigationController?.pushViewController(settings, animated: true)
   }
-
+  
   private func displayBraveSearchDebugMenu() {
     let hostingController =
-      UIHostingController(rootView: BraveSearchDebugMenu(logging: BraveSearchLogEntry.shared))
-
+    UIHostingController(rootView: BraveSearchDebugMenu(logging: BraveSearchLogEntry.shared))
+    
     navigationController?.pushViewController(hostingController, animated: true)
   }
-
+  
   // Do not use `sections` directly to access sections/rows. Use DataSource.sections instead.
   private var sections: [Static.Section] {
     var list = [
@@ -131,12 +133,12 @@ class SettingsViewController: TableViewController {
       supportSection,
       aboutSection,
     ]
-
+    
     let shouldShowVPNSection = { () -> Bool in
       if !VPNProductInfo.isComplete || Preferences.VPN.vpnSettingHeaderWasDismissed.value {
         return false
       }
-
+      
       switch BraveVPN.vpnState {
       case .notPurchased, .expired:
         return true
@@ -144,41 +146,41 @@ class SettingsViewController: TableViewController {
         return false
       }
     }()
-
+    
     if shouldShowVPNSection {
       list.insert(enableBraveVPNSection, at: 0)
     }
-
+    
     if let debugSection = debugSection {
       list.append(debugSection)
     }
-
+    
     return list
   }
-
+  
   // MARK: - Sections
-
+  
   private lazy var enableBraveVPNSection: Static.Section = {
     let header = EnableVPNSettingHeader()
     header.enableVPNTapped = { [weak self] in
       self?.enableVPNTapped()
     }
-
+    
     header.dismissHeaderTapped = { [weak self] in
       self?.dismissVPNHeaderTapped()
     }
-
+    
     let calculatedSize = header.systemLayoutSizeFitting(
       CGSize(width: navigationController?.navigationBar.frame.width ?? 0, height: 300),
       withHorizontalFittingPriority: .required,
       verticalFittingPriority: .fittingSizeLevel
     )
-
+    
     header.bounds = CGRect(size: calculatedSize)
-
+    
     return Static.Section(header: .view(header))
   }()
-
+  
   private lazy var defaultBrowserSection: Static.Section = {
     var section = Static.Section(
       rows: [
@@ -192,10 +194,10 @@ class SettingsViewController: TableViewController {
           }, cellClass: MultilineButtonCell.self)
       ]
     )
-
+    
     return section
   }()
-
+  
   private lazy var featuresSection: Static.Section = {
     var section = Static.Section(
       header: .title(Strings.features),
@@ -215,7 +217,7 @@ class SettingsViewController: TableViewController {
       ],
       uuid: featureSectionUUID.uuidString
     )
-
+    
     if BraveRewards.isAvailable, let rewards = rewards {
       section.rows += [
         Row(
@@ -234,7 +236,7 @@ class SettingsViewController: TableViewController {
           }, image: UIImage(named: "settings-brave-rewards", in: .module, compatibleWith: nil)!, accessory: .disclosureIndicator)
       ]
     }
-
+    
     section.rows.append(
       Row(
         text: Strings.BraveNews.braveNews,
@@ -253,12 +255,17 @@ class SettingsViewController: TableViewController {
           self.navigationController?.pushViewController(controller, animated: true)
         }, image: UIImage(named: "settings-brave-today", in: .module, compatibleWith: nil)!.template, accessory: .disclosureIndicator)
     )
-
+    
+    section.rows.append(Row(text: Strings.BraveIPFS.ipfsSettingsTitle, selection: {
+      let controller = IPFSSettingsViewController(braveCore: self.braveCore)
+      self.navigationController?.pushViewController(controller, animated: true)
+    }, image: UIImage(named: "settings-ipfs", in: .module, compatibleWith: nil)!.template, accessory: .disclosureIndicator))
+    
     vpnRow = vpnSettingsRow()
     if let vpnRow = vpnRow {
       section.rows.append(vpnRow)
     }
-
+    
     section.rows.append(
       Row(
         text: Strings.PlayList.playListTitle,
@@ -267,10 +274,10 @@ class SettingsViewController: TableViewController {
           self.navigationController?.pushViewController(playlistSettings, animated: true)
         }, image: UIImage(named: "settings-playlist", in: .module, compatibleWith: nil)!.template, accessory: .disclosureIndicator)
     )
-
+    
     return section
   }()
-
+  
   private lazy var generalSection: Static.Section = {
     var general = Static.Section(
       header: .title(Strings.settingsGeneralSectionTitle),
@@ -289,7 +296,7 @@ class SettingsViewController: TableViewController {
                 self.present(SyncAlerts.noConnection, animated: true)
                 return
               }
-
+              
               self.navigationController?
                 .pushViewController(SyncSettingsTableViewController(syncAPI: syncAPI, syncProfileService: syncProfileServices, tabManager: tabManager), animated: true)
             } else {
@@ -305,7 +312,7 @@ class SettingsViewController: TableViewController {
           }, image: UIImage(named: "settings-siri-shortcuts", in: .module, compatibleWith: nil)!.template, accessory: .disclosureIndicator, cellClass: MultilineValue1Cell.self),
       ]
     )
-
+    
     if UIDevice.isIpad {
       general.rows.append(
         .boolRow(
@@ -314,7 +321,7 @@ class SettingsViewController: TableViewController {
           image: UIImage(named: "settings-desktop-always", in: .module, compatibleWith: nil)!.template)
       )
     }
-
+    
     general.rows.append(contentsOf: [
       .boolRow(
         title: Strings.enablePullToRefresh,
@@ -333,10 +340,10 @@ class SettingsViewController: TableViewController {
         self.navigationController?.pushViewController(controller, animated: true)
       }, image: UIImage(named: "settings-website-redirects", in: .module, compatibleWith: nil)!.template, accessory: .disclosureIndicator, cellClass: MultilineSubtitleCell.self)
     general.rows.append(websiteRedirectsRow)
-
+    
     return general
   }()
-
+  
   private lazy var tabsSection: Static.Section = {
     var tabs = Static.Section(header: .title(Strings.tabsSettingsSectionTitle), rows: [])
     
@@ -409,7 +416,7 @@ class SettingsViewController: TableViewController {
       header: .title(Strings.displaySettingsSection),
       rows: []
     )
-
+    
     let themeSubtitle = DefaultTheme(rawValue: Preferences.General.themeNormalMode.value)?.displayString
     var row = Row(text: Strings.themesDisplayBrightness, detailText: themeSubtitle, image: UIImage(named: "settings-appearance", in: .module, compatibleWith: nil)!.template, accessory: .disclosureIndicator, cellClass: MultilineSubtitleCell.self)
     row.selection = { [unowned self] in
@@ -423,7 +430,7 @@ class SettingsViewController: TableViewController {
       )
       optionsViewController.headerText = Strings.themesDisplayBrightness
       optionsViewController.footerText = Strings.themesDisplayBrightnessFooter
-
+      
       let nightModeSection = Section(
         header: .title(Strings.NightMode.sectionTitle.uppercased()),
         rows: [
@@ -438,7 +445,7 @@ class SettingsViewController: TableViewController {
         ],
         footer: .title(Strings.NightMode.sectionDescription)
       )
-
+      
       optionsViewController.dataSource.sections.append(nightModeSection)
       self.navigationController?.pushViewController(optionsViewController, animated: true)
     }
@@ -452,7 +459,7 @@ class SettingsViewController: TableViewController {
       accessory: .disclosureIndicator,
       cellClass: MultilineValue1Cell.self
     ))
-
+    
     // We do NOT persistently save page-zoom settings in Private Browsing
     if !PrivateBrowsingManager.shared.isPrivateBrowsing {
       display.rows.append(
@@ -466,7 +473,7 @@ class SettingsViewController: TableViewController {
             cellClass: MultilineValue1Cell.self)
       )
     }
-
+    
     display.rows.append(contentsOf: [
       .boolRow(
         title: Strings.showBookmarkButtonInTopToolbar,
@@ -477,14 +484,14 @@ class SettingsViewController: TableViewController {
         option: Preferences.Rewards.hideRewardsIcon,
         image: UIImage(named: "settings-rewards-icon", in: .module, compatibleWith: nil)!.template),
     ])
-
+    
     return display
   }()
-
+  
   private var vpnRow: Row?
-
+  
   private func vpnSettingsRow() -> Row {
-
+    
     let (text, color) = { () -> (String, UIColor) in
       switch BraveVPN.vpnState {
       case .notPurchased:
@@ -499,11 +506,11 @@ class SettingsViewController: TableViewController {
         return (Strings.VPN.settingsVPNExpired, .braveErrorLabel)
       }
     }()
-
+    
     return Row(
       text: Strings.VPN.vpnName, detailText: text,
       selection: { [unowned self] in
-
+        
         let vc = { () -> UIViewController? in
           switch BraveVPN.vpnState {
           case .notPurchased, .expired:
@@ -518,13 +525,13 @@ class SettingsViewController: TableViewController {
             return vc
           }
         }()
-
+        
         guard let vcToShow = vc else { return }
         self.navigationController?.pushViewController(vcToShow, animated: true)
       }, image: UIImage(named: "settings-vpn", in: .module, compatibleWith: nil)!.template, accessory: .disclosureIndicator,
       cellClass: ColoredDetailCell.self, context: [ColoredDetailCell.colorKey: color], uuid: "vpnrow")
   }
-
+  
   private lazy var securitySection: Static.Section = {
     return Section(
       header: .title(Strings.security),
@@ -542,7 +549,7 @@ class SettingsViewController: TableViewController {
       ]
     )
   }()
-
+  
   private lazy var supportSection: Static.Section = {
     return Static.Section(
       header: .title(Strings.support),
@@ -569,7 +576,7 @@ class SettingsViewController: TableViewController {
       ]
     )
   }()
-
+  
   private lazy var aboutSection: Static.Section = {
     let version = String(
       format: Strings.versionTemplate,
@@ -587,12 +594,12 @@ class SettingsViewController: TableViewController {
             actionSheet.popoverPresentationController?.sourceView = self.view
             actionSheet.popoverPresentationController?.sourceRect = self.view.bounds
             let iOSVersion = "\(device.systemName) \(UIDevice.current.systemVersion)"
-
+            
             let deviceModel = String(format: Strings.deviceTemplate, device.modelName, iOSVersion)
             let copyDebugInfoAction = UIAlertAction(title: Strings.copyAppInfoToClipboard, style: .default) { _ in
               UIPasteboard.general.strings = [version, coreVersion, deviceModel]
             }
-
+            
             actionSheet.addAction(copyDebugInfoAction)
             actionSheet.addAction(UIAlertAction(title: Strings.cancelButtonTitle, style: .cancel, handler: nil))
             self.navigationController?.present(actionSheet, animated: true, completion: nil)
@@ -624,10 +631,10 @@ class SettingsViewController: TableViewController {
       ]
     )
   }()
-
+  
   private lazy var debugSection: Static.Section? = {
     if AppConstants.buildChannel.isPublic { return nil }
-
+    
     return Static.Section(
       rows: [
         Row(text: "Region: \(Locale.current.regionCode ?? "--")"),
@@ -718,7 +725,7 @@ class SettingsViewController: TableViewController {
       ]
     )
   }()
-
+  
   private func setUpSections() {
     if let cryptoStore = cryptoStore, let keyringStore = keyringStore {
       let settingsStore = cryptoStore.settingsStore
@@ -759,12 +766,12 @@ class SettingsViewController: TableViewController {
       self.dataSource.sections = sections
     }
   }
-
+  
   // MARK: - Actions
-
+  
   private func enableVPNTapped() {
     let state = BraveVPN.vpnState
-
+    
     switch state {
     case .notPurchased, .expired:
       guard let vc = state.enableVPNDestinationVC else { return }
@@ -774,7 +781,7 @@ class SettingsViewController: TableViewController {
       dismiss(animated: true)
     }
   }
-
+  
   private func dismissVPNHeaderTapped() {
     if dataSource.sections.isEmpty { return }
     dataSource.sections[0] = Static.Section()
@@ -792,7 +799,7 @@ extension SettingsViewController: BraveWalletKeyringServiceObserver {
   func autoLockMinutesChanged() {}
   func selectedAccountChanged(_ coin: BraveWallet.CoinType) {}
   func accountsAdded(_ coin: BraveWallet.CoinType, addresses: [String]) {}
-
+  
   func keyringReset() {
     setUpSections()
     navigationController?.popViewController(animated: true)

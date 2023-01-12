@@ -16,7 +16,7 @@ import Growth
 
 extension WalletStore {
   /// Creates a WalletStore based on whether or not the user is in Private Mode
-  static func from(privateMode: Bool) -> WalletStore? {
+  static func from(braveCore: BraveCoreMain?, privateMode: Bool) -> WalletStore? {
     guard
       let keyringService = BraveWallet.KeyringServiceFactory.get(privateMode: privateMode),
       let rpcService = BraveWallet.JsonRpcServiceFactory.get(privateMode: privateMode),
@@ -31,6 +31,7 @@ extension WalletStore {
       return nil
     }
     return WalletStore(
+      braveCore: braveCore,
       keyringService: keyringService,
       rpcService: rpcService,
       walletService: walletService,
@@ -46,7 +47,7 @@ extension WalletStore {
 
 extension CryptoStore {
   /// Creates a CryptoStore based on whether or not the user is in Private Mode
-  static func from(privateMode: Bool) -> CryptoStore? {
+  static func from(braveCore: BraveCoreMain, privateMode: Bool) -> CryptoStore? {
     guard
       let keyringService = BraveWallet.KeyringServiceFactory.get(privateMode: privateMode),
       let rpcService = BraveWallet.JsonRpcServiceFactory.get(privateMode: privateMode),
@@ -61,6 +62,7 @@ extension CryptoStore {
       return nil
     }
     return CryptoStore(
+      braveCore: braveCore,
       keyringService: keyringService,
       rpcService: rpcService,
       walletService: walletService,
@@ -79,7 +81,7 @@ extension BrowserViewController {
   /// when the pending request is updated so we can update the wallet url bar button.
   func newWalletStore() -> WalletStore? {
     let privateMode = PrivateBrowsingManager.shared.isPrivateBrowsing
-    guard let walletStore = WalletStore.from(privateMode: privateMode) else {
+    guard let walletStore = WalletStore.from(braveCore: self.braveCore, privateMode: privateMode) else {
       Logger.module.error("Failed to load wallet. One or more services were unavailable")
       return nil
     }
@@ -209,8 +211,8 @@ extension Tab: BraveWalletProviderDelegate {
           return
         }
       }
-      
-      guard WalletStore.from(privateMode: isPrivate) != nil else {
+
+      guard WalletStore.from(braveCore: nil, privateMode: isPrivate) != nil else {
         completion(.internal, nil)
         return
       }

@@ -12,6 +12,7 @@ import BraveShared
 extension WalletStore {
   static var previewStore: WalletStore {
     .init(
+      braveCore: nil,
       keyringService: MockKeyringService(),
       rpcService: MockJsonRpcService(),
       walletService: MockBraveWalletService(),
@@ -28,6 +29,7 @@ extension WalletStore {
 extension CryptoStore {
   static var previewStore: CryptoStore {
     .init(
+      braveCore: nil,
       keyringService: MockKeyringService(),
       rpcService: MockJsonRpcService(),
       walletService: MockBraveWalletService(),

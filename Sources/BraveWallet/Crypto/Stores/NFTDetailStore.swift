@@ -5,13 +5,6 @@
 
 import BraveCore
 
-private extension String {
-  var httpifyIpfsUrl: String {
-    let trimmedUrl = self.trim(" ")
-    return trimmedUrl.hasPrefix("ipfs://") ? trimmedUrl.replacingOccurrences(of: "ipfs://", with: "https://ipfs.io/ipfs/") : trimmedUrl
-  }
-}
-
 struct ERC721Metadata: Codable, Equatable {
   var imageURLString: String?
   var name: String?
@@ -22,12 +15,10 @@ struct ERC721Metadata: Codable, Equatable {
     case name
     case description
   }
-  
+
   init(from decoder: Decoder) throws {
     let container = try decoder.container(keyedBy: CodingKeys.self)
-    if let imageString = try container.decodeIfPresent(String.self, forKey: .imageURLString) {
-      self.imageURLString = imageString.hasPrefix("data:image") ? imageString : imageString.httpifyIpfsUrl
-    }
+    self.imageURLString = try container.decodeIfPresent(String.self, forKey: .imageURLString)
     self.name = try container.decodeIfPresent(String.self, forKey: .name)
     self.description = try container.decodeIfPresent(String.self, forKey: .description)
   }
@@ -54,15 +45,18 @@ class NFTDetailStore: ObservableObject {
   @Published var isLoading: Bool = false
   @Published var erc721Metadata: ERC721Metadata?
   @Published var networkInfo: BraveWallet.NetworkInfo = .init()
+  let braveCore: BraveCoreMain?
   
   init(
     rpcService: BraveWalletJsonRpcService,
     nft: BraveWallet.BlockchainToken,
-    erc721Metadata: ERC721Metadata?
+    erc721Metadata: ERC721Metadata?,
+    braveCore: BraveCoreMain?
   ) {
     self.rpcService = rpcService
     self.nft = nft
     self.erc721Metadata = erc721Metadata
+    self.braveCore = braveCore
   }
   
   func update() {
@@ -79,7 +73,10 @@ class NFTDetailStore: ObservableObject {
         
         isLoading = false
         if let data = metaData.data(using: .utf8),
-           let result = try? JSONDecoder().decode(ERC721Metadata.self, from: data) {
+           var result = try? JSONDecoder().decode(ERC721Metadata.self, from: data) {
+            if result.imageURLString != nil && result.imageURLString!.hasPrefix("ipfs://") {
+                result.imageURLString = braveCore?.ipfsAPI.resolveGatewayUrl(for: result.imageURLString!)?.absoluteString
+            }
           erc721Metadata = result
         }
       }

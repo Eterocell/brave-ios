@@ -74,8 +74,10 @@ public class CryptoStore: ObservableObject {
   private let txService: BraveWalletTxService
   private let ethTxManagerProxy: BraveWalletEthTxManagerProxy
   private let solTxManagerProxy: BraveWalletSolanaTxManagerProxy
+  let braveCore: BraveCoreMain?
   
   public init(
+    braveCore: BraveCoreMain?,
     keyringService: BraveWalletKeyringService,
     rpcService: BraveWalletJsonRpcService,
     walletService: BraveWalletBraveWalletService,
@@ -86,6 +88,7 @@ public class CryptoStore: ObservableObject {
     ethTxManagerProxy: BraveWalletEthTxManagerProxy,
     solTxManagerProxy: BraveWalletSolanaTxManagerProxy
   ) {
+    self.braveCore = braveCore
     self.keyringService = keyringService
     self.rpcService = rpcService
     self.walletService = walletService
@@ -265,7 +268,8 @@ public class CryptoStore: ObservableObject {
     let store = NFTDetailStore(
       rpcService: rpcService,
       nft: nft,
-      erc721Metadata: erc721Metadata
+      erc721Metadata: erc721Metadata,
+      braveCore: braveCore
     )
     nftDetailStore = store
     return store
